@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="hr" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glasovni Diktafon & Zadaci</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Pulse visualizer animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.15); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .recording-pulse {
+            animation: pulse-ring 1.8s infinite ease-in-out;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased selection:bg-blue-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <i class="fa-solid font-bold fa-microphone-lines text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight text-white">Glasovnik</h1>
+                    <p class="text-xs text-slate-400">Brze glasovne bilješke & podsjetnici</p>
+                </div>
+            </div>
+            
+            <button id="btnManualNew" class="inline-flex items-center space-x-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg transition-colors border border-slate-700">
+                <i class="fa-solid fa-plus text-blue-400"></i>
+                <span class="hidden sm:inline">Ručni unos</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+
+        <!-- Voice Dictation Hero Box -->
+        <section class="relative bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 sm:p-8 backdrop-blur-md shadow-xl text-center flex flex-col items-center justify-center overflow-hidden">
+            <!-- Background Glow -->
+            <div class="absolute -top-24 -left-24 w-60 h-60 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -right-24 w-60 h-60 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <span class="text-xs font-semibold tracking-wider uppercase text-blue-400 mb-2">Pritisni i izdiktiraj</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-slate-100 max-w-md mb-6">Što ne želiš zaboraviti?</h2>
+
+            <!-- Big Record Button Container -->
+            <div class="relative flex items-center justify-center mb-6">
+                <!-- Pulse Effect Ring -->
+                <div id="pulseRing" class="hidden absolute w-36 h-36 rounded-full bg-red-500/20 recording-pulse"></div>
+                
+                <!-- Main Mic Button -->
+                <button id="btnRecord" title="Započni snimanje" class="relative z-10 w-28 h-28 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 transition-all duration-300 flex flex-col items-center justify-center shadow-xl shadow-blue-600/30 border-4 border-slate-900 group">
+                    <i id="micIcon" class="fa-solid fa-microphone text-3xl text-white group-hover:scale-110 transition-transform"></i>
+                    <span id="recordLabel" class="text-xs font-medium text-blue-100 mt-1">Snimaj</span>
+                </button>
+            </div>
+
+            <!-- Speech Status Text -->
+            <div class="h-8 flex items-center justify-center">
+                <p id="speechStatus" class="text-sm font-medium text-slate-400 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-400"></i> Kliknite mikrofon i počnite govoriti na hrvatskom
+                </p>
+            </div>
+
+            <!-- Live Speech Live Transcript Preview -->
+            <div id="liveTranscriptBox" class="hidden w-full max-w-lg mt-4 p-4 rounded-xl bg-slate-900/90 border border-blue-500/30 text-left">
+                <span class="text-xs font-semibold text-blue-400 block mb-1 uppercase tracking-wider">U uživo prijenosu:</span>
+                <p id="liveTranscript" class="text-sm text-slate-200 italic font-medium min-h-[1.5rem]">Prepoznavanje u tijeku...</p>
+            </div>
+        </section>
+
+        <!-- Task List Header & Controls -->
+        <section class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <span>Moje Bilješke</span>
+                    <span id="taskCountBadge" class="bg-slate-800 text-blue-400 text-xs px-2.5 py-0.5 rounded-full border border-slate-700">0</span>
+                </h3>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700 text-xs font-medium overflow-x-auto w-full sm:w-auto">
+                <button data-filter="all" class="filter-tab px-3 py-1.5 rounded-lg bg-blue-600 text-white transition-all">Sve</button>
+                <button data-filter="urgent" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all">🔴 Hitno</button>
+                <button data-filter="active" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all">Aktivno</button>
+                <button data-filter="completed" class="filter-tab px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all">Riješeno</button>
+            </div>
+        </section>
+
+        <!-- List of Voice Notes / Tasks -->
+        <section id="taskList" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-12">
+            <!-- Dynamic task cards will be rendered here -->
+        </section>
+
+        <!-- Empty State Container -->
+        <div id="emptyState" class="hidden flex-col items-center justify-center py-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/40">
+            <div class="w-16 h-16 rounded-full bg-slate-800/80 flex items-center justify-center text-slate-500 text-2xl mb-3">
+                <i class="fa-regular fa-clipboard"></i>
+            </div>
+            <h4 class="text-slate-300 font-semibold text-base mb-1">Nema zabilježenih zadataka</h4>
+            <p class="text-slate-500 text-xs max-w-sm">Kliknite gumb za snimanje iznad i izdiktirajte što trebate zapamtiti.</p>
+        </div>
+
+    </main>
+
+    <!-- Post-Recording / Edit Modal -->
+    <div id="noteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 px-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl transform scale-95 transition-transform duration-300" id="modalContainer">
+            
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <h3 id="modalTitle" class="font-bold text-slate-100">Uredi & Spremi bilješku</h3>
+                </div>
+                <button id="btnCloseModal" class="text-slate-400 hover:text-slate-200 w-8 h-8 rounded-lg hover:bg-slate-800 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="noteForm" class="mt-4 space-y-4">
+                <input type="hidden" id="noteId" value="">
+
+                <!-- Transcribed Text Editing -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Tekst bilješke (Ručno uredi po potrebi)
+                    </label>
+                    <textarea id="noteText" rows="3" required class="w-full bg-slate-800/90 border border-slate-700 focus:border-blue-500 rounded-xl p-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all" placeholder="Upišite ili uredi tekst..."></textarea>
+                </div>
+
+                <!-- Priority Selector -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Razina prioriteta
+                    </label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="priorityOptions">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priority" value="urgent" class="peer sr-only">
+                            <div class="p-2.5 rounded-xl border border-slate-700 peer-checked:border-red-500 peer-checked:bg-red-500/10 text-center transition-all hover:bg-slate-800">
+                                <div class="text-sm font-semibold text-red-400">🔴 Hitno</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">Visok prioritet</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priority" value="important" class="peer sr-only" checked>
+                            <div class="p-2.5 rounded-xl border border-slate-700 peer-checked:border-orange-500 peer-checked:bg-orange-500/10 text-center transition-all hover:bg-slate-800">
+                                <div class="text-sm font-semibold text-orange-400">🟠 Važno</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">Srednji prioritet</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priority" value="medium" class="peer sr-only">
+                            <div class="p-2.5 rounded-xl border border-slate-700 peer-checked:border-amber-500 peer-checked:bg-amber-500/10 text-center transition-all hover:bg-slate-800">
+                                <div class="text-sm font-semibold text-amber-400">🟡 Umjereno</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">Normalan rad</div>
+                            </div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="priority" value="low" class="peer sr-only">
+                            <div class="p-2.5 rounded-xl border border-slate-700 peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 text-center transition-all hover:bg-slate-800">
+                                <div class="text-sm font-semibold text-emerald-400">🟢 Sporedno</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">Kad stignem</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Deadline Picker & Presets -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Rok za izvršenje (Deadline)
+                    </label>
+                    <!-- Quick Presets -->
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        <button type="button" data-preset="today" class="btn-preset text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded-lg text-slate-300">Danas</button>
+                        <button type="button" data-preset="tomorrow" class="btn-preset text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded-lg text-slate-300">Sutra</button>
+                        <button type="button" data-preset="in3days" class="btn-preset text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded-lg text-slate-300">Za 3 dana</button>
+                        <button type="button" data-preset="nextweek" class="btn-preset text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded-lg text-slate-300">Sljedeći tjedan</button>
+                    </div>
+                    <input type="datetime-local" id="noteDeadline" class="w-full bg-slate-800/90 border border-slate-700 focus:border-blue-500 rounded-xl p-2.5 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
+                    <button type="button" id="btnCancelModal" class="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors">Odustani</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl shadow-lg shadow-blue-500/25 transition-all">Spremi Bilješku</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script>
+        // State Management
+        let notes = JSON.parse(localStorage.getItem('voice_dictaphone_notes') || '[]');
+        let currentFilter = 'all';
+        let isRecording = false;
+        let recognition = null;
+
+        // DOM Elements
+        const btnRecord = document.getElementById('btnRecord');
+        const recordLabel = document.getElementById('recordLabel');
+        const micIcon = document.getElementById('micIcon');
+        const pulseRing = document.getElementById('pulseRing');
+        const speechStatus = document.getElementById('speechStatus');
+        const liveTranscriptBox = document.getElementById('liveTranscriptBox');
+        const liveTranscript = document.getElementById('liveTranscript');
+
+        const noteModal = document.getElementById('noteModal');
+        const modalContainer = document.getElementById('modalContainer');
+        const modalTitle = document.getElementById('modalTitle');
+        const noteForm = document.getElementById('noteForm');
+        const noteIdInput = document.getElementById('noteId');
+        const noteTextInput = document.getElementById('noteText');
+        const noteDeadlineInput = document.getElementById('noteDeadline');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const btnCancelModal = document.getElementById('btnCancelModal');
+        const btnManualNew = document.getElementById('btnManualNew');
+
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const taskCountBadge = document.getElementById('taskCountBadge');
+        const filterTabs = document.querySelectorAll('.filter-tab');
+
+        // Priority Configuration Definition
+        const PRIORITIES = {
+            urgent: { label: '🔴 Hitno & Važno', class: 'bg-red-500/10 text-red-400 border-red-500/30' },
+            important: { label: '🟠 Važno', class: 'bg-orange-500/10 text-orange-400 border-orange-500/30' },
+            medium: { label: '🟡 Umjereno', class: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
+            low: { label: '🟢 Sporedno', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' }
+        };
+
+        // Initialize Web Speech API
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                speechStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> Govorni unos nije podržan u ovom pregledniku. Unesite ručno.`;
+                return null;
+            }
+
+            const rec = new SpeechRecognition();
+            rec.continuous = true;
+            rec.interimResults = true;
+            rec.lang = 'hr-HR'; // Set Croatian language
+
+            rec.onstart = () => {
+                isRecording = true;
+                updateRecordingUI(true);
+            };
+
+            rec.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                const currentText = finalTranscript || interimTranscript;
+                if (currentText) {
+                    liveTranscript.textContent = currentText;
+                }
+            };
+
+            rec.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                speechStatus.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Greška pri prepoznavanju: ${event.error}`;
+                stopRecording();
+            };
+
+            rec.onend = () => {
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+
+            return rec;
+        }
+
+        // Recording UI Update
+        function updateRecordingUI(recording) {
+            if (recording) {
+                pulseRing.classList.remove('hidden');
+                btnRecord.classList.remove('from-blue-600', 'to-indigo-600');
+                btnRecord.classList.add('from-red-600', 'to-rose-600', 'animate-pulse');
+                recordLabel.textContent = 'Zaustavi';
+                micIcon.className = 'fa-solid fa-square text-2xl text-white';
+                speechStatus.innerHTML = `<i class="fa-solid fa-waveform text-red-400 animate-pulse"></i> Slušam... Govorite sada...`;
+                liveTranscriptBox.classList.remove('hidden');
+            } else {
+                pulseRing.classList.add('hidden');
+                btnRecord.classList.remove('from-red-600', 'to-rose-600', 'animate-pulse');
+                btnRecord.classList.add('from-blue-600', 'to-indigo-600');
+                recordLabel.textContent = 'Snimaj';
+                micIcon.className = 'fa-solid fa-microphone text-3xl text-white';
+                speechStatus.innerHTML = `<i class="fa-solid fa-circle-info text-blue-400"></i> Kliknite mikrofon i počnite govoriti na hrvatskom`;
+            }
+        }
+
+        // Start Recording
+        function startRecording() {
+            if (!recognition) {
+                recognition = initSpeechRecognition();
+            }
+            if (!recognition) {
+                openModal();
+                return;
+            }
+
+            try {
+                liveTranscript.textContent = 'Slušam vaše riječi...';
+                recognition.start();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Stop Recording and Open Save Modal
+        function stopRecording() {
+            isRecording = false;
+            if (recognition) {
+                try { recognition.stop(); } catch(e){}
+            }
+            updateRecordingUI(false);
+
+            const capturedText = liveTranscript.textContent !== 'Slušam vaše riječi...' ? liveTranscript.textContent : '';
+            liveTranscriptBox.classList.add('hidden');
+
+            // Open Modal with captured text
+            openModal(null, capturedText);
+        }
+
+        // Toggle Recording
+        btnRecord.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        // Open Modal (for new or edit)
+        function openModal(noteId = null, initialText = '') {
+            noteForm.reset();
+            noteIdInput.value = '';
+
+            if (noteId) {
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    modalTitle.textContent = 'Uredi bilješku';
+                    noteIdInput.value = note.id;
+                    noteTextInput.value = note.text;
+                    noteDeadlineInput.value = note.deadline || '';
+                    
+                    const priorityRadio = document.querySelector(`input[name="priority"][value="${note.priority}"]`);
+                    if (priorityRadio) priorityRadio.checked = true;
+                }
+            } else {
+                modalTitle.textContent = 'Nova bilješka';
+                noteTextInput.value = initialText;
+                // Default deadline to tomorrow 18:00
+                setPresetDeadline('tomorrow');
+            }
+
+            noteModal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContainer.classList.remove('scale-95');
+            modalContainer.classList.add('scale-100');
+            setTimeout(() => noteTextInput.focus(), 150);
+        }
+
+        // Close Modal
+        function closeModal() {
+            modalContainer.classList.remove('scale-100');
+            modalContainer.classList.add('scale-95');
+            noteModal.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        btnCloseModal.addEventListener('click', closeModal);
+        btnCancelModal.addEventListener('click', closeModal);
+        btnManualNew.addEventListener('click', () => openModal());
+
+        // Deadline Preset Handler
+        function setPresetDeadline(preset) {
+            const now = new Date();
+            let targetDate = new Date();
+
+            if (preset === 'today') {
+                targetDate.setHours(20, 0, 0, 0);
+            } else if (preset === 'tomorrow') {
+                targetDate.setDate(now.getDate() + 1);
+                targetDate.setHours(18, 0, 0, 0);
+            } else if (preset === 'in3days') {
+                targetDate.setDate(now.getDate() + 3);
+                targetDate.setHours(18, 0, 0, 0);
+            } else if (preset === 'nextweek') {
+                targetDate.setDate(now.getDate() + 7);
+                targetDate.setHours(12, 0, 0, 0);
+            }
+
+            // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+            const year = targetDate.getFullYear();
+            const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+            const day = String(targetDate.getDate()).padStart(2, '0');
+            const hours = String(targetDate.getHours()).padStart(2, '0');
+            const minutes = String(targetDate.getMinutes()).padStart(2, '0');
+
+            noteDeadlineInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        document.querySelectorAll('.btn-preset').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                setPresetDeadline(e.target.dataset.preset);
+            });
+        });
+
+        // Save Form Handler
+        noteForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = noteTextInput.value.trim();
+            if (!text) return;
+
+            const id = noteIdInput.value || Date.now().toString();
+            const priority = document.querySelector('input[name="priority"]:checked').value;
+            const deadline = noteDeadlineInput.value;
+
+            const existingIndex = notes.findIndex(n => n.id === id);
+
+            if (existingIndex > -1) {
+                // Edit existing
+                notes[existingIndex] = {
+                    ...notes[existingIndex],
+                    text,
+                    priority,
+                    deadline,
+                    updatedAt: new Date().toISOString()
+                };
+            } else {
+                // Add new
+                const newNote = {
+                    id,
+                    text,
+                    priority,
+                    deadline,
+                    completed: false,
+                    createdAt: new Date().toISOString()
+                };
+                notes.unshift(newNote);
+            }
+
+            saveAndRender();
+            closeModal();
+        });
+
+        // Save to LocalStorage & Re-render
+        function saveAndRender() {
+            localStorage.setItem('voice_dictaphone_notes', JSON.stringify(notes));
+            renderNotes();
+        }
+
+        // Toggle Completed Status
+        window.toggleComplete = function(id) {
+            notes = notes.map(n => n.id === id ? { ...n, completed: !n.completed } : n);
+            saveAndRender();
+        };
+
+        // Edit Note
+        window.editNote = function(id) {
+            openModal(id);
+        };
+
+        // Delete Note
+        window.deleteNote = function(id) {
+            notes = notes.filter(n => n.id !== id);
+            saveAndRender();
+        };
+
+        // Filter Switcher
+        filterTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                filterTabs.forEach(t => {
+                    t.classList.remove('bg-blue-600', 'text-white');
+                    t.classList.add('text-slate-400');
+                });
+                tab.classList.add('bg-blue-600', 'text-white');
+                tab.classList.remove('text-slate-400');
+                currentFilter = tab.dataset.filter;
+                renderNotes();
+            });
+        });
+
+        // Format Date for Display
+        function formatDate(dateString) {
+            if (!dateString) return 'Bez roka';
+            const date = new Date(dateString);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+
+            const timeStr = date.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+            const dateStr = date.toLocaleDateString('hr-HR', { day: 'numeric', month: 'numeric', year: 'numeric' });
+
+            if (isToday) {
+                return `Danas u ${timeStr}`;
+            }
+            return `${dateStr} u ${timeStr}`;
+        }
+
+        // Render Task Cards
+        function renderNotes() {
+            // Filter Notes
+            let filtered = notes.filter(note => {
+                if (currentFilter === 'urgent') return note.priority === 'urgent' && !note.completed;
+                if (currentFilter === 'active') return !note.completed;
+                if (currentFilter === 'completed') return note.completed;
+                return true;
+            });
+
+            // Update Task Count
+            taskCountBadge.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                taskList.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            taskList.innerHTML = filtered.map(note => {
+                const priorityInfo = PRIORITIES[note.priority] || PRIORITIES.medium;
+                const isOverdue = note.deadline && new Date(note.deadline) < new Date() && !note.completed;
+
+                return `
+                    <div class="group bg-slate-800/70 hover:bg-slate-800 border ${note.completed ? 'border-slate-800/80 opacity-60' : 'border-slate-700/80'} rounded-2xl p-5 transition-all duration-200 flex flex-col justify-between shadow-lg relative">
+                        <div>
+                            <!-- Header Info -->
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${priorityInfo.class}">
+                                    ${priorityInfo.label}
+                                </span>
+                                
+                                <div class="flex items-center space-x-1 text-slate-400">
+                                    <button onclick="editNote('${note.id}')" class="p-1.5 hover:text-blue-400 hover:bg-slate-700/50 rounded-lg transition-colors" title="Uredi">
+                                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                                    </button>
+                                    <button onclick="deleteNote('${note.id}')" class="p-1.5 hover:text-red-400 hover:bg-slate-700/50 rounded-lg transition-colors" title="Obriši">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Note Content Text -->
+                            <p class="text-slate-100 text-sm sm:text-base font-medium leading-relaxed mb-4 ${note.completed ? 'line-through text-slate-400' : ''}">
+                                ${escapeHtml(note.text)}
+                            </p>
+                        </div>
+
+                        <!-- Footer Details -->
+                        <div class="pt-3 border-t border-slate-700/50 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-1.5 ${isOverdue ? 'text-red-400 font-medium' : 'text-slate-400'}">
+                                <i class="fa-regular fa-clock"></i>
+                                <span>${formatDate(note.deadline)}</span>
+                                ${isOverdue ? '<span class="text-[10px] bg-red-500/20 px-1.5 py-0.5 rounded text-red-300 ml-1">Isteklo</span>' : ''}
+                            </div>
+
+                            <button onclick="toggleComplete('${note.id}')" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-colors ${note.completed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}">
+                                <i class="fa-solid ${note.completed ? 'fa-circle-check' : 'fa-circle'} text-xs"></i>
+                                <span class="font-medium">${note.completed ? 'Riješeno' : 'Onači riješeno'}</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Helper function to escape HTML special characters
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+
+        // Initial render on page load
+        window.onload = function() {
+            renderNotes();
+        };
+    </script>
+</body>
+</html>
